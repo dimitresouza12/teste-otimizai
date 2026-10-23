@@ -312,9 +312,10 @@ textarea{flex:1;min-width:0;resize:none;overflow-y:auto;max-height:120px;min-hei
         return fim();
       }
       var t = bolhas[i++];
-      var espera = Math.min(Math.max(t.length * 45, 900), 3200);
+      // Mesma regra do WhatsApp: 0,06 s por caractere (entre 1,5 e 12 s); na primeira bolha soma o tempo de leitura.
+      var espera = Math.min(Math.max(t.length * 60 * (0.85 + Math.random() * 0.3), 1500), 12000) + (i === 1 ? 1200 : 400);
       typing(true);
-      pause(i === 1 ? 700 : espera).then(function () { if (gen !== S.gen) return; typing(false); push('bot', t); proxima(); });
+      pause(espera).then(function () { if (gen !== S.gen) return; typing(false); push('bot', t); proxima(); });
     }
     proxima();
   }
