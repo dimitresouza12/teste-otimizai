@@ -31,16 +31,14 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:20px 16px}
 <body>
 <main>
   <div class="brand"><img src="/otimiza-icone.png" alt=""><span>Otimiza Aí</span></div>
-  <h1>Converse com um agente de verdade</h1>
-  <p class="lead">Escolha um segmento e simule o atendimento no WhatsApp, como se fosse o seu cliente falando.</p>
+  <h1>Teste os agentes da Otimiza Aí</h1>
+  <p class="lead">Em breve você poderá simular aqui o atendimento no WhatsApp de cada segmento.</p>
   <div class="grid" id="lista"></div>
 </main>
 <footer>Otimiza Aí &middot; otimizai.net.br</footer>
 <script>
   // Para incluir um segmento novo, basta acrescentar uma linha aqui e criar a pasta com a página dele.
-  var NICHOS = [
-    { href: '/costacunha/?t=6b2e52cde7bfdbee8a9a8f0237e5a654', nome: 'Advocacia', desc: 'Atendimento de um escritório de advocacia previdenciária.' }
-  ];
+  var NICHOS = [];
   var el = document.getElementById('lista');
   NICHOS.forEach(function (n) {
     var a = document.createElement('a'); a.className = 'nicho'; a.href = n.href;
