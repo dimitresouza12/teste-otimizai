@@ -64,6 +64,8 @@ input[type=text]:focus,textarea:focus{border-color:var(--accent)}
 .msg.in{align-self:flex-start;background:var(--bg-3);border-top-left-radius:5px}
 .msg.out{align-self:flex-end;background:var(--accent);color:var(--accent-ink);border-bottom-right-radius:5px}
 .msg.out.midia{background:#245f78;color:#e8f7fd}
+.msg a{color:inherit;text-decoration:underline;text-underline-offset:2px}
+.msg.in a{color:var(--accent)}
 .msg small{display:block;opacity:.75;font-size:12px;margin-bottom:3px}
 .msg img{display:block;max-width:220px;width:100%;border-radius:10px;margin-bottom:6px}
 .aviso{align-self:stretch;border:1px dashed rgba(243,201,105,.55);background:rgba(243,201,105,.07);border-radius:14px;padding:11px 14px;font-size:14px}
@@ -213,7 +215,17 @@ textarea{flex:1;min-width:0;resize:none;overflow-y:auto;max-height:120px;min-hei
     else { d = el('sys'); d.textContent = texto; feed.appendChild(d); scroll(); return d; }
     if (extra && extra.rotulo) { var s = document.createElement('small'); s.textContent = extra.rotulo; d.appendChild(s); }
     if (extra && extra.img) { var im = document.createElement('img'); im.src = extra.img; im.alt = 'Foto enviada'; d.appendChild(im); }
-    if (texto) d.appendChild(document.createTextNode(texto));
+    if (texto) {
+      // Links viram clicáveis (montados por DOM, sem innerHTML) para o cliente abrir o contrato de exemplo.
+      var re = /https?:\/\/[^\s]+/g, ult = 0, m;
+      while ((m = re.exec(texto)) !== null) {
+        var url = m[0].replace(/[.,;!?)]+$/, '');
+        if (m.index > ult) d.appendChild(document.createTextNode(texto.slice(ult, m.index)));
+        var a = document.createElement('a'); a.href = url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = url; d.appendChild(a);
+        ult = m.index + url.length; re.lastIndex = ult;
+      }
+      if (ult < texto.length) d.appendChild(document.createTextNode(texto.slice(ult)));
+    }
     feed.appendChild(d); scroll(); return d;
   }
   function render() {
