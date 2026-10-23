@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#071520">
+<title>Procuração de exemplo | Otimiza Aí</title>
+<link rel="icon" href="../otimiza-icone.png">
+<style>
+:root{--bg:#071520;--bg-2:#0c1f2e;--line:#1a3347;--ink:#fff;--muted:#8fa6b8;--accent:#3ab0dc;--accent-ink:#04202c;--warn:#f3c969}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;line-height:1.5;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:24px 16px}
+.card{width:100%;max-width:460px;background:var(--bg-2);border:1px solid var(--line);border-radius:18px;padding:28px 22px}
+.brand{display:flex;align-items:center;gap:10px;margin-bottom:20px}
+.brand img{width:34px;height:34px;border-radius:8px}
+h1{font-size:21px;margin:0 0 8px}
+p{margin:0 0 14px;color:var(--muted)}
+.notice{background:rgba(243,201,105,.08);border:1px solid rgba(243,201,105,.3);color:#f6dc9f;border-radius:12px;padding:12px 14px;font-size:14px;margin:0 0 16px}
+dl{margin:0 0 16px;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+dl div{display:flex;justify-content:space-between;gap:12px;padding:10px 14px;border-bottom:1px solid var(--line);font-size:14px}
+dl div:last-child{border-bottom:0}
+dt{color:var(--muted)}dd{margin:0;text-align:right}
+.btn{display:block;width:100%;border:0;border-radius:12px;padding:13px 18px;font-weight:600;background:var(--accent);color:var(--accent-ink);opacity:.5;cursor:not-allowed;font-size:16px}
+</style>
+</head>
+<body>
+<main class="card">
+  <div class="brand"><img src="../otimiza-icone.png" alt=""><b>Otimiza Aí</b></div>
+  <h1>Procuração para assinatura</h1>
+  <div class="notice"><b>Documento de exemplo.</b> Este teste não gera documento real nem cobra nada de ninguém.</div>
+  <p>No atendimento de verdade, este link abre a procuração no ZapSign, com os dados que a pessoa informou na conversa, para assinar pelo celular.</p>
+  <dl>
+    <div><dt>Documento</dt><dd>Procuração</dd></div>
+    <div><dt>Signatário(a)</dt><dd id="nome">...</dd></div>
+    <div><dt>Tipo</dt><dd id="tipo">...</dd></div>
+    <div><dt>Situação</dt><dd>Aguardando assinatura</dd></div>
+  </dl>
+  <button class="btn" type="button" disabled>Assinar (indisponível no teste)</button>
+</main>
+<script>
+(function(){
+  var q = new URLSearchParams(location.search);
+  var n = (q.get('nome') || '').trim(), t = q.get('tipo') || '';
+  document.getElementById('nome').textContent = n || 'Cliente de teste';
+  document.getElementById('tipo').textContent = t === 'salario_maternidade' ? 'Salário-maternidade' : 'Previdenciário';
+})();
+</script>
+</body>
+</html>
