@@ -66,6 +66,7 @@ input[type=text]:focus,textarea:focus{border-color:var(--accent)}
 .msg.out.midia{background:#245f78;color:#e8f7fd}
 .msg a{color:inherit;text-decoration:underline;text-underline-offset:2px}
 .msg.in a{color:var(--accent)}
+.msg .lida{display:block;text-align:right;margin:2px 0 0;font-size:11px;opacity:.7}
 .msg small{display:block;opacity:.75;font-size:12px;margin-bottom:3px}
 .msg img{display:block;max-width:220px;width:100%;border-radius:10px;margin-bottom:6px}
 .aviso{align-self:stretch;border:1px dashed rgba(243,201,105,.55);background:rgba(243,201,105,.07);border-radius:14px;padding:11px 14px;font-size:14px}
@@ -180,7 +181,7 @@ textarea{flex:1;min-width:0;resize:none;overflow-y:auto;max-height:120px;min-hei
 
   var $ = function (id) { return document.getElementById(id); };
   var feed = $('feed'), txt = $('txt');
-  var S = { sid: '', inst: '', nome: '', hist: [], pending: [], deadline: 0, firstAt: 0, busy: false, pausado: false, cfg: null, polls: [], gen: 0 };
+  var S = { sid: '', inst: '', nome: '', hist: [], pending: [], deadline: 0, firstAt: 0, busy: false, pausado: false, cfg: null, polls: [], gen: 0, ultimaEm: 0, leit: 0, ctx: null, mostrando: false, interrompido: false, bufMs: 10000 };
 
   /* ---------- armazenamento local (opcional) ---------- */
   var KEY = 'teste-otimizai:' + C;
@@ -197,6 +198,22 @@ textarea{flex:1;min-width:0;resize:none;overflow-y:auto;max-height:120px;min-hei
     });
   }
   function base(acao) { return { acao: acao, token: T, cliente: C, sessionId: S.sid, nome: S.nome, instancia: S.inst }; }
+  /* ---------- tempo humano (mesma regra do WhatsApp) ---------- */
+  function rnd(a, b) { return a + Math.random() * (b - a); }
+  function jit() { return 0.85 + Math.random() * 0.3; }
+  function primeiraResposta() { return !S.hist.some(function (h) { return h.r === 'bot'; }); }
+  function leituraTexto(t) { var p = String(t).trim().split(/\s+/).filter(Boolean).length; return Math.min(Math.max(p / 4, 1), 12); }
+  var URLRE = /https?:\/\/\S+/g;
+  function tempoDigitar(b, primeira) {
+    var links = (b.match(URLRE) || []).length, sem = b.replace(URLRE, '');
+    var vel = primeira ? 9 : 5.5, mn = primeira ? 1.5 : 2, mx = primeira ? 10 : 25;
+    var seg = sem.length / vel + links * 1.5 + (/\d/.test(sem) ? 1 : 0);
+    return Math.min(Math.max(seg * jit(), mn), mx) * 1000;
+  }
+  function marcarLida() {
+    var m = feed.querySelectorAll('.msg.out'); var ult = m[m.length - 1];
+    if (ult && !ult.querySelector('.lida')) { var l = document.createElement('small'); l.className = 'lida'; l.textContent = 'lida'; ult.appendChild(l); }
+  }
   function pause(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
 
   /* ---------- telas ---------- */
@@ -250,13 +267,14 @@ textarea{flex:1;min-width:0;resize:none;overflow-y:auto;max-height:120px;min-hei
   function armar() {
     var agora = Date.now();
     if (!S.firstAt) S.firstAt = agora;
-    S.deadline = Math.min(agora + BUFFER_MS, S.firstAt + BUFFER_MAX_MS);
+    S.bufMs = primeiraResposta() ? 6000 : 10000;
+    S.deadline = Math.min(agora + S.bufMs, S.firstAt + BUFFER_MAX_MS);
   }
   setInterval(function () {
     var fill = $('barfill');
     if (!S.pending.length) { fill.style.width = '0'; return; }
     var restante = S.deadline - Date.now();
-    fill.style.width = Math.max(0, Math.min(100, (restante / BUFFER_MS) * 100)) + '%';
+    fill.style.width = Math.max(0, Math.min(100, (restante / S.bufMs) * 100)) + '%';
     status(restante > 0 ? 'Aguardando você terminar de escrever...' : '');
     if (restante <= 0 && !S.busy) flush();
   }, 120);
@@ -267,6 +285,8 @@ textarea{flex:1;min-width:0;resize:none;overflow-y:auto;max-height:120px;min-hei
     txt.value = ''; auto();
     push('user', t);
     S.pending.push(t);
+    S.leit += leituraTexto(t); S.ultimaEm = Date.now();
+    if (S.mostrando) S.interrompido = true;
     armar();
   }
 
@@ -274,12 +294,15 @@ textarea{flex:1;min-width:0;resize:none;overflow-y:auto;max-height:120px;min-hei
   function flush() {
     if (S.busy || !S.pending.length) return;
     var texto = S.pending.join('\n\n');
+    S.ctx = { ult: S.ultimaEm || Date.now(), buf: S.bufMs, leit: Math.min(S.leit || 1, 20) };
+    S.leit = 0;
     S.pending = []; S.firstAt = 0; S.deadline = 0;
     $('barfill').style.width = '0'; status('');
+    marcarLida();
     chamar(texto, 0);
   }
   function chamar(texto, tentativa) {
-    S.busy = true; var gen = S.gen; typing(true);
+    S.busy = true; var gen = S.gen;
     var corpo = base('mensagens'); corpo.texto = texto;
     post(API, corpo).then(function (r) {
       if (gen !== S.gen) return;
@@ -301,21 +324,34 @@ textarea{flex:1;min-width:0;resize:none;overflow-y:auto;max-height:120px;min-hei
   function mostrar(b, gen) {
     var bolhas = (b && b.mensagens) || [], avisos = (b && b.avisos) || [];
     S.pausado = !!(b && b.pausado); save();
-    var i = 0;
+    var primeira = primeiraResposta(), ctx = S.ctx || { ult: Date.now(), buf: 10000, leit: 1 };
+    var complexa = bolhas.some(function (t) { return /R\$|%|https?:\/\/|\d{3,}/.test(t); });
+    var alvo = ctx.ult + ctx.buf + (primeira ? rnd(500, 1500) : rnd(1500, 4000)) + ctx.leit * 1000 + (complexa ? rnd(4000, 8000) : rnd(1000, 3000));
+    var i = 0, exibidas = [], descartou = false;
+    S.mostrando = true; S.interrompido = false;
+    function terminar() {
+      S.mostrando = false; S.interrompido = false; typing(false);
+      if (descartou) post(API, { acao: 'interrompido', token: T, cliente: C, sessionId: S.sid, instancia: S.inst, mostradas: exibidas }).catch(function () {});
+      avisos.forEach(function (a) { push('aviso', a); });
+      $('pausa').hidden = !S.pausado;
+      agendarAvisos(gen);
+      return fim();
+    }
     function proxima() {
-      if (gen !== S.gen) return;
-      if (i >= bolhas.length) {
-        typing(false);
-        avisos.forEach(function (a) { push('aviso', a); });
-        $('pausa').hidden = !S.pausado;
-        agendarAvisos(gen);
-        return fim();
-      }
-      var t = bolhas[i++];
-      // Mesma regra do WhatsApp: 0,06 s por caractere (entre 1,5 e 12 s); na primeira bolha soma o tempo de leitura.
-      var espera = Math.min(Math.max(t.length * 60 * (0.85 + Math.random() * 0.3), 1500), 12000) + (i === 1 ? 1200 : 400);
-      typing(true);
-      pause(espera).then(function () { if (gen !== S.gen) return; typing(false); push('bot', t); proxima(); });
+      if (gen !== S.gen) { S.mostrando = false; return; }
+      if (i >= bolhas.length) return terminar();
+      var t = bolhas[i], primeiraBolha = i === 0; i++;
+      var antes = primeiraBolha ? Math.max(alvo - Date.now(), 0) : rnd(800, 2000);
+      pause(antes).then(function () {
+        if (gen !== S.gen) { S.mostrando = false; return; }
+        // chegou mensagem nova: so sai bolha com link; as outras sao descartadas
+        if (S.interrompido && !/https?:\/\//.test(t)) { descartou = true; return proxima(); }
+        typing(true);
+        pause(tempoDigitar(t, primeira)).then(function () {
+          if (gen !== S.gen) { S.mostrando = false; return; }
+          typing(false); push('bot', t); exibidas.push(t); proxima();
+        });
+      });
     }
     proxima();
   }
@@ -366,7 +402,9 @@ textarea{flex:1;min-width:0;resize:none;overflow-y:auto;max-height:120px;min-hei
         var rot = bolha.querySelector('small'); if (rot) rot.textContent = rotulo;
         if (tipo === 'audio') { bolha.appendChild(document.createTextNode(r.body.texto)); S.hist[S.hist.length - 1].t = r.body.texto; }
         S.hist[S.hist.length - 1].x = { midia: true, rotulo: rotulo }; save();
-        S.pending.push(r.body.texto); armar();
+        S.pending.push(r.body.texto); S.leit += tipo === 'audio' ? Math.min(60, Math.max(3, blob.size / 6000)) : 4; S.ultimaEm = Date.now();
+        if (S.mostrando) S.interrompido = true;
+        armar();
       } else {
         var rot2 = bolha.querySelector('small'); if (rot2) rot2.textContent = rotulo + ' (não consegui processar)';
         if (r.status === 429) push('sys', 'Muitos arquivos em pouco tempo. Aguarde um pouco.');
